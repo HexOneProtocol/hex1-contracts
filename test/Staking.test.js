@@ -21,6 +21,8 @@ describe("Staking contract test", function () {
     let usdcPriceFeed = "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6";
     let uniPriceFeed = "0x553303d460EE0afB37EdFf9bE42922D8FF63220e";
     let pulsexRouterAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
+    let hexDistRate = 500;
+    let hexitDistRate = 500;
 
     before(async function () {
         [
@@ -56,17 +58,11 @@ describe("Staking contract test", function () {
             "MUNI"
         );
 
-        this.hexOnePriceFeed = await deployProxy(
-            "HexOnePriceFeedTest",
-            "HexOnePriceFeedTest",
-            [this.hexToken.address, this.mockUSDC.address, pulsexRouterAddress]
-        );
-
         this.staking = await deployProxy("HexOneStaking", "HexOneStaking", [
             this.hexToken.address,
             this.mockHEXIT.address,
-            this.hexOnePriceFeed.address,
-            50,
+            hexDistRate,
+            hexitDistRate,
         ]);
     });
 
@@ -255,7 +251,7 @@ describe("Staking contract test", function () {
             it("reverts purchase hex if caller is not hexOneProtocol", async function () {
                 await expect(
                     this.staking.purchaseHex(bigNum(100, 8))
-                ).to.be.revertedWith("no permission");
+                ).to.be.revertedWith("only HexOneProtocol");
             });
 
             it("purchase hex", async function () {
@@ -274,7 +270,7 @@ describe("Staking contract test", function () {
             it("reverts purchase hexit if caller is not hexOneBootstrap", async function () {
                 await expect(
                     this.staking.purchaseHexit(bigNum(100, 18))
-                ).to.be.revertedWith("no permission");
+                ).to.be.revertedWith("only HexOneBootstrap");
             });
 
             it("purchase hexit", async function () {
@@ -367,7 +363,9 @@ describe("Staking contract test", function () {
                     smallNum(hexitRewardsRatePerShare, 18)
                 );
 
-                expect(smallNum(hexRewardsRatePerShare, 18)).to.be.greaterThan(0);
+                expect(smallNum(hexRewardsRatePerShare, 18)).to.be.greaterThan(
+                    0
+                );
                 expect(
                     smallNum(hexitRewardsRatePerShare, 18)
                 ).to.be.greaterThan(0);

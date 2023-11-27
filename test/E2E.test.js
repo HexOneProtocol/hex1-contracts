@@ -84,8 +84,8 @@ describe("HexOne Protocol", function () {
         this.staking = await deployProxy("HexOneStaking", "HexOneStaking", [
             this.hexToken.address,
             this.HEXIT.address,
-            this.hexOnePriceFeed.address,
             50, // 5% HEXIT dist
+            100, // 10% HEX$1 dist
         ]);
         this.hexOneProtocol = await deploy(
             "HexOneProtocol",
@@ -140,7 +140,6 @@ describe("HexOne Protocol", function () {
             this.hexOneBootstrap.address,
             this.hexToken.address,
             this.hexOneToken.address,
-            usdcAddress,
             this.hexOneProtocol.address,
             this.hexOnePriceFeed.address,
         ]);
@@ -481,6 +480,7 @@ describe("HexOne Protocol", function () {
                 );
                 expect(smallNum(receivedAmount, 18)).to.be.greaterThan(0);
 
+                await spendTime(day);
                 beforeBal = await this.HEXIT.balanceOf(
                     this.sacrificer_2.address
                 );
@@ -519,7 +519,7 @@ describe("HexOne Protocol", function () {
                 await spendTime(100 * day);
 
                 let hexitForAirdrop =
-                    await this.hexOneBootstrap.airdropHEXITAmount();
+                    await this.hexOneBootstrap.HEXITAmountForAirdrop();
                 let hexitForSacrifice =
                     await this.hexOneBootstrap.HEXITAmountForSacrifice();
                 let totalHexit =
@@ -663,8 +663,7 @@ describe("HexOne Protocol", function () {
                             this.hexToken.address,
                             BigInt(hexAmountForDeposit),
                             duration,
-                            this.depositor_1.address,
-                            false
+                            this.depositor_1.address
                         );
                     let afterBal = await this.hexOneToken.balanceOf(
                         this.depositor_1.address
@@ -865,8 +864,7 @@ describe("HexOne Protocol", function () {
                                 this.hexOneToken.address,
                                 bigNum(10),
                                 4,
-                                this.depositor_3.address,
-                                false
+                                this.depositor_3.address
                             )
                     ).to.be.revertedWith("invalid token");
                 });
@@ -879,8 +877,7 @@ describe("HexOne Protocol", function () {
                                 this.hexToken.address,
                                 0,
                                 4,
-                                this.depositor_3.address,
-                                false
+                                this.depositor_3.address
                             )
                     ).to.be.revertedWith("invalid amount");
                 });
@@ -893,8 +890,7 @@ describe("HexOne Protocol", function () {
                                 this.hexToken.address,
                                 bigNum(10),
                                 20,
-                                this.depositor_3.address,
-                                false
+                                this.depositor_3.address
                             )
                     ).to.be.revertedWith("invalid duration");
                 });
@@ -935,8 +931,7 @@ describe("HexOne Protocol", function () {
                             this.hexToken.address,
                             BigInt(hexAmountForDeposit),
                             duration,
-                            this.depositor_3.address,
-                            false
+                            this.depositor_3.address
                         );
                     let afterBal = await this.hexOneToken.balanceOf(
                         this.depositor_3.address
@@ -1026,8 +1021,8 @@ describe("HexOne Protocol", function () {
                     [
                         this.hexToken.address,
                         this.HEXIT.address,
-                        this.hexOnePriceFeed.address,
                         100, // 10% HEXIT dist
+                        150, // 15% HEXIT dist
                     ]
                 );
             });
