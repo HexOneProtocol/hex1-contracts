@@ -10,7 +10,6 @@ import "./interfaces/IHexOneProtocol.sol";
 import "./interfaces/IHexOneVault.sol";
 import "./interfaces/IHexOneStaking.sol";
 import "./interfaces/IHexOneToken.sol";
-import "./utils/CheckLibrary.sol";
 
 contract HexOneProtocol is Ownable, IHexOneProtocol {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -172,9 +171,6 @@ contract HexOneProtocol is Ownable, IHexOneProtocol {
         uint256 _amount
     ) external override {
         address sender = msg.sender;
-        // if (sender != hexOneEscrow) {
-        //     CheckLibrary.checkEOA();
-        // }
         require(sender != address(0), "zero caller address");
         require(allowedTokens.contains(_token), "not allowed token");
         require(
@@ -195,9 +191,6 @@ contract HexOneProtocol is Ownable, IHexOneProtocol {
         address _depositor
     ) external override {
         address sender = msg.sender;
-        // if (msg.sender != hexOneEscrow) {
-        //     CheckLibrary.checkEOA();
-        // }
         require(sender != address(0), "zero address caller");
         require(allowedTokens.contains(_token), "invalid token");
         require(_amount > 0, "invalid amount");
@@ -229,9 +222,6 @@ contract HexOneProtocol is Ownable, IHexOneProtocol {
         uint256 _depositId
     ) external override returns (uint256) {
         address sender = msg.sender;
-        // if (sender != hexOneEscrow) {
-        //     CheckLibrary.checkEOA();
-        // }
 
         require(sender != address(0), "zero caller address");
         require(allowedTokens.contains(_token), "not allowed token");
@@ -264,9 +254,6 @@ contract HexOneProtocol is Ownable, IHexOneProtocol {
         uint256 _depositId
     ) external override returns (uint256) {
         address sender = msg.sender;
-        // if (sender != hexOneEscrow) {
-        //     CheckLibrary.checkEOA();
-        // }
 
         require(sender != address(0), "zero caller address");
         require(allowedTokens.contains(_token), "not allowed token");

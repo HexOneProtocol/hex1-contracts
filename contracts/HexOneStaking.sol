@@ -33,6 +33,7 @@ contract HexOneStaking is
     uint256 public totalHexShareAmount; // decimals 18
     uint256 public totalHexitShareAmount; // decimals 18
     uint256 public stakingLaunchTime;
+    uint256 public minStakingPeriod;
 
     address public hexOneProtocol;
     address public hexOneBootstrap;
@@ -78,6 +79,7 @@ contract HexOneStaking is
         hexitDistRate = _hexitDistRate;
         hexToken = _hexToken;
         hexitToken = _hexitToken;
+        minStakingPeriod = 1 days;
 
         __Ownable_init();
         __ReentrancyGuard_init();
@@ -261,6 +263,10 @@ contract HexOneStaking is
     ) external nonReentrant whenOnlyStakingEnable {
         address sender = msg.sender;
         StakingInfo storage info = stakingInfos[sender][_token];
+        require(
+            info.stakedTime + minStakingPeriod < block.timestamp,
+            "too soon"
+        );
         DistTokenWeight memory tokenWeight = distTokenWeights[_token];
         require(allowedTokens.contains(_token), "not allowed token");
         require(info.stakedTime > 0, "no staking pool");

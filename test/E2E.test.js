@@ -54,13 +54,6 @@ describe("HexOne Protocol", function () {
         this.USDC = new ethers.Contract(usdcAddress, erc20_abi, this.deployer);
 
         this.hexOneToken = await deploy(
-            "HexOneToken",
-            "HexOneToken",
-            "HexOne",
-            "HEXONE"
-        );
-
-        this.hexOneToken = await deploy(
             "HexOneMockToken",
             "HexOneMockToken",
             "HexOne",
@@ -322,6 +315,11 @@ describe("HexOne Protocol", function () {
                     smallNum(receivedAmount, 8)
                 );
                 expect(smallNum(receivedAmount, 8)).to.be.greaterThan(0);
+                expect(
+                    await this.hexOneBootstrap.isSacrificeParticipant(
+                        this.sacrificer_1.address
+                    )
+                ).to.be.equal(true);
                 console.log(
                     "sacrifice token and hex token balance after sacrifice",
                     smallNum(
@@ -440,9 +438,17 @@ describe("HexOne Protocol", function () {
                         .requestAirdrop()
                 ).to.be.revertedWith("not have eligible assets for airdrop");
 
+                let beforeRequestors =
+                    await this.hexOneBootstrap.getAirdropRequestors();
                 await this.hexOneBootstrap
                     .connect(this.sacrificer_1)
                     .requestAirdrop();
+                let afterRequestors =
+                    await this.hexOneBootstrap.getAirdropRequestors();
+
+                expect(
+                    afterRequestors.length - beforeRequestors.length
+                ).to.be.equal(1);
 
                 await spendTime(hour * 3);
                 await expect(
@@ -615,6 +621,77 @@ describe("HexOne Protocol", function () {
                     "$HEX1 amount that sacrificer received as rewards: ",
                     smallNum(rewardsAmount_1, 18),
                     smallNum(rewardsAmount_2, 18)
+                );
+            });
+
+            it("distributeHexOne", async function () {
+                let hexOneBalance = await this.hexOneToken.balanceOf(
+                    this.hexOneEscrow.address
+                );
+                expect(Number(hexOneBalance)).to.be.greaterThan(0);
+                let totalAmount =
+                    await this.hexOneBootstrap.HEXITAmountForSacrifice();
+
+                let participants =
+                    await this.hexOneBootstrap.getSacrificeParticipants();
+
+                let participantAmount =
+                    await this.hexOneBootstrap.userRewardsForSacrifice(
+                        participants[0]
+                    );
+                let expectAmount =
+                    (BigInt(hexOneBalance) * BigInt(participantAmount)) /
+                    BigInt(totalAmount);
+                let beforeBal = await this.hexOneToken.balanceOf(
+                    participants[0]
+                );
+                await this.hexOneEscrow.distributeHexOne();
+                let afterBal = await this.hexOneToken.balanceOf(
+                    participants[0]
+                );
+
+                expect(BigInt(afterBal) - BigInt(beforeBal)).to.be.equal(
+                    BigInt(expectAmount)
+                );
+                await this.hexOneEscrow.getOverview(participants[0]);
+            });
+
+            // it("borrow HexOne", async function () {
+            //     let beforeBal = await this.hexOneToken.balanceOf(
+            //         this.hexOneEscrow.address
+            //     );
+            //     let info = await this.hexOneVault.getUserInfos(
+            //         this.hexOneEscrow.address
+            //     );
+            //     info = info[0];
+            //     await this.hexOneEscrow.borrowHexOne(
+            //         BigInt(info.initialHexPrice) * BigInt(2)
+            //     );
+            //     let afterBal = await this.hexOneToken.balanceOf(
+            //         this.hexOneEscrow.address
+            //     );
+
+            //     console.log(BigInt(afterBal) - BigInt(beforeBal));
+            // });
+        });
+
+        describe("withdraw", function () {
+            it("withdraw", async function () {
+                let expectAmount = await this.hexOneToken.balanceOf(
+                    this.hexOneBootstrap.address
+                );
+                let beforeBal = await this.hexOneToken.balanceOf(
+                    this.deployer.address
+                );
+                await this.hexOneBootstrap.withdrawToken(
+                    this.hexOneToken.address
+                );
+                let afterBal = await this.hexOneToken.balanceOf(
+                    this.deployer.address
+                );
+
+                expect(BigInt(afterBal) - BigInt(beforeBal)).to.be.equal(
+                    BigInt(expectAmount)
                 );
             });
         });

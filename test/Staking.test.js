@@ -254,6 +254,12 @@ describe("Staking contract test", function () {
                 ).to.be.revertedWith("only HexOneProtocol");
             });
 
+            it("reverts purchase if purchase amount is invalid", async function () {
+                await expect(
+                    this.staking.connect(this.hexOneProtocol).purchaseHex(0)
+                ).to.be.revertedWith("invalid purchase amount");
+            });
+
             it("purchase hex", async function () {
                 await this.hexToken.connect(this.hexOneProtocol).mint();
                 let purchaseAmount = await this.hexToken.balanceOf(
@@ -273,6 +279,18 @@ describe("Staking contract test", function () {
                 ).to.be.revertedWith("only HexOneBootstrap");
             });
 
+            it("reverts purchase hexit if purchase amount is invalid", async function () {
+                await expect(
+                    this.staking.connect(this.hexOneBootstrap).purchaseHexit(0)
+                ).to.be.revertedWith("invalid purchase amount");
+            });
+
+            it("reverts purchase hexit if purchase amount is invalid", async function () {
+                await expect(
+                    this.staking.connect(this.hexOneProtocol).purchaseHex(0)
+                ).to.be.revertedWith("invalid purchase amount");
+            });
+
             it("purchase hexit", async function () {
                 let purchaseAmount = bigNum(1000, 18);
                 await this.mockHEXIT.mintToken(
@@ -289,11 +307,20 @@ describe("Staking contract test", function () {
 
             it("enable staking", async function () {
                 await this.staking.enableStaking();
+                // reverts if staking is already enabled
+                await expect(this.staking.enableStaking()).to.be.revertedWith(
+                    "already enabled"
+                );
             });
         });
 
         describe("staking, claim and unstake", function () {
             it("stake USDC with staker_1", async function () {
+                let beforeStakingStatus =
+                    await this.staking.getUserStakingStatus(
+                        this.staker_1.address
+                    );
+                beforeStakingStatus = beforeStakingStatus[3];
                 let stakeAmount = bigNum(100, 18);
                 await this.mockUSDC.mintToken(
                     BigInt(stakeAmount),
@@ -305,6 +332,35 @@ describe("Staking contract test", function () {
                 await this.staking
                     .connect(this.staker_1)
                     .stakeToken(this.mockUSDC.address, BigInt(stakeAmount));
+                let afterStakingStatus =
+                    await this.staking.getUserStakingStatus(
+                        this.staker_1.address
+                    );
+                afterStakingStatus = afterStakingStatus[3];
+
+                expect(smallNum(stakeAmount, 18)).to.be.equal(
+                    smallNum(
+                        BigInt(afterStakingStatus.stakedAmount) -
+                            BigInt(beforeStakingStatus.stakedAmount),
+                        18
+                    )
+                );
+                expect(
+                    smallNum(BigInt(stakeAmount) / BigInt(10), 18)
+                ).to.be.equal(
+                    smallNum(
+                        BigInt(afterStakingStatus.claimableHexitAmount) -
+                            BigInt(beforeStakingStatus.claimableHexitAmount),
+                        18
+                    )
+                );
+                expect(smallNum(stakeAmount, 18)).to.be.equal(
+                    smallNum(
+                        BigInt(afterStakingStatus.totalLockedAmount) -
+                            BigInt(beforeStakingStatus.totalLockedAmount),
+                        18
+                    )
+                );
             });
 
             it("stake UNI with staker_1", async function () {
@@ -456,7 +512,23 @@ describe("Staking contract test", function () {
                 expect(smallNum(hexitAmount, 18)).to.be.equal(0);
             });
 
+            it("reverts if try to unstake before 24 hours", async function () {
+                let stakingInfo = await this.staking.stakingInfos(
+                    this.staker_1.address,
+                    this.mockUSDC.address
+                );
+                let stakedAmount = stakingInfo.stakedAmount;
+                let unstakeAmount = BigInt(stakedAmount) / BigInt(2);
+
+                await expect(
+                    this.staking
+                        .connect(this.staker_1)
+                        .unstake(this.mockUSDC.address, unstakeAmount)
+                ).to.be.revertedWith("too soon");
+            });
+
             it("unstake tokens and check userStakingStatus", async function () {
+                await spendTime(day);
                 let stakingInfo = await this.staking.stakingInfos(
                     this.staker_1.address,
                     this.mockUSDC.address
@@ -477,6 +549,53 @@ describe("Staking contract test", function () {
                     smallNum(BigInt(afterBal) - BigInt(beforeBal), 18)
                 ).to.be.equal(smallNum(unstakeAmount, 18));
             });
+        });
+    });
+
+    describe("remove AllowedTokens", function () {
+        it("reverts if caller is not the owner", async function () {
+            await expect(
+                this.staking.connect(this.staker_1).removeAllowedTokens([])
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("reverts if tokens length is zero", async function () {
+            await expect(
+                this.staking.removeAllowedTokens([])
+            ).to.be.revertedWith("invalid length array");
+        });
+
+        it("reverts if token not exists", async function () {
+            await expect(
+                this.staking.removeAllowedTokens([ethers.constants.AddressZero])
+            ).to.be.revertedWith("not exists allowedToken");
+        });
+
+        it("reverts if token's pool that going to remove is exists", async function () {
+            expect(
+                smallNum(
+                    await this.staking.lockedTokenAmounts(this.mockUNI.address),
+                    18
+                )
+            ).to.be.greaterThan(0);
+
+            await expect(
+                this.staking.removeAllowedTokens([this.mockUNI.address])
+            ).to.be.revertedWith("live staking pools exist");
+        });
+
+        it("remove allowed tokens", async function () {
+            let beforeStakingStatus = await this.staking.getUserStakingStatus(
+                this.staker_1.address
+            );
+            await this.staking.removeAllowedTokens([this.hexToken.address]);
+            let afterStakingStatus = await this.staking.getUserStakingStatus(
+                this.staker_1.address
+            );
+
+            expect(
+                beforeStakingStatus.length - afterStakingStatus.length
+            ).to.be.equal(1);
         });
     });
 });
